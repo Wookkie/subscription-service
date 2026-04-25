@@ -2,24 +2,28 @@ package server
 
 import (
 	"context"
+	"fmt"
 	"net/http"
-	"strconv"
 
+	"github.com/Wookkie/subscription-service/internal/config"
+	"github.com/Wookkie/subscription-service/internal/handler"
+	"github.com/Wookkie/subscription-service/internal/service"
 	"github.com/gin-gonic/gin"
 )
 
 type Server struct {
-	cfg       any
+	cfg       *config.Config
 	httpServe *http.Server
 }
 
-func New(host string, port int) *Server {
+func New(cfg *config.Config) *Server {
 	httpServe := http.Server{
-		Addr: host + ":" + strconv.Itoa(port),
+		Addr: fmt.Sprintf("%s:%d", cfg.Host, cfg.Port),
 	}
 
 	myServer := Server{
 		httpServe: &httpServe,
+		cfg:       cfg,
 	}
 
 	myServer.configRoutes()
@@ -29,14 +33,18 @@ func New(host string, port int) *Server {
 
 func (s *Server) configRoutes() {
 	router := gin.Default()
-	router.GET("/")
+	router.GET("/", func(c *gin.Context) {
+		c.JSON(200, gin.H{"status": "ok"})
+	})
+	service := service.NewSubService()
+	handler := handler.NewSubHandler(service)
 	subscriptions := router.Group("/subscriptions")
 
-	subscriptions.GET("/")
-	subscriptions.GET("/:id")
-	subscriptions.POST("/")
-	subscriptions.PUT("/:id")
-	subscriptions.DELETE("/:id")
+	subscriptions.GET("/", handler.GetAllSubscriptions)
+	subscriptions.GET("/:id", handler.GetSubscriptionByID)
+	subscriptions.POST("/", handler.CreateSubscription)
+	subscriptions.PUT("/:id", handler.UpdateSubscription)
+	subscriptions.DELETE("/:id", handler.DeleteSubscription)
 
 	s.httpServe.Handler = router
 
