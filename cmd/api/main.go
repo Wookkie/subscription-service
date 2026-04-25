@@ -1,13 +1,18 @@
 package main
 
 import (
-	"fmt"
+	"log"
 
 	"github.com/Wookkie/subscription-service/internal/config"
+	"github.com/Wookkie/subscription-service/internal/server"
 )
 
 func main() {
 	cfg := config.ReadConfig()
 
-	fmt.Printf("Host: %s\nPort: %d\n", cfg.Host, cfg.Port)
+	api := server.New(cfg)
+
+	if err := api.Run(); err != nil {
+		log.Fatal(err)
+	}
 }
