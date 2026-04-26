@@ -6,7 +6,9 @@ import (
 	"net/http"
 
 	"github.com/Wookkie/subscription-service/internal/config"
+	"github.com/Wookkie/subscription-service/internal/database"
 	"github.com/Wookkie/subscription-service/internal/handler"
+	"github.com/Wookkie/subscription-service/internal/repository"
 	"github.com/Wookkie/subscription-service/internal/service"
 	"github.com/gin-gonic/gin"
 )
@@ -14,9 +16,19 @@ import (
 type Server struct {
 	cfg       *config.Config
 	httpServe *http.Server
+	db        *database.DBStorage
 }
 
 func New(cfg *config.Config) *Server {
+	db, err := database.New(context.Background(), cfg.DBConn)
+	if err != nil {
+		panic(err)
+	}
+
+	if err := database.ApplyMigrations(cfg.DBConn); err != nil {
+		panic(err)
+	}
+
 	httpServe := http.Server{
 		Addr: fmt.Sprintf("%s:%d", cfg.Host, cfg.Port),
 	}
@@ -24,6 +36,7 @@ func New(cfg *config.Config) *Server {
 	myServer := Server{
 		httpServe: &httpServe,
 		cfg:       cfg,
+		db:        db,
 	}
 
 	myServer.configRoutes()
@@ -33,11 +46,15 @@ func New(cfg *config.Config) *Server {
 
 func (s *Server) configRoutes() {
 	router := gin.Default()
+
 	router.GET("/", func(c *gin.Context) {
-		c.JSON(200, gin.H{"status": "ok"})
+		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
-	service := service.NewSubService()
+
+	repo := repository.NewSubscriptionRepository(s.db.DB)
+	service := service.NewSubService(repo)
 	handler := handler.NewSubHandler(service)
+
 	subscriptions := router.Group("/subscriptions")
 
 	subscriptions.GET("/", handler.GetAllSubscriptions)
@@ -55,5 +72,9 @@ func (s *Server) Run() error {
 }
 
 func (s *Server) Stop(ctx context.Context) error {
+	if s.db != nil {
+		s.db.Close()
+	}
+
 	return s.httpServe.Shutdown(ctx)
 }

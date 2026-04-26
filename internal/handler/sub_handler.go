@@ -20,7 +20,7 @@ func (s *SubHandler) CreateSubscription(ctx *gin.Context) {
 	var req domain.SubscriptionRequest
 
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"}) 
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
 		return
 	}
 
@@ -30,7 +30,7 @@ func (s *SubHandler) CreateSubscription(ctx *gin.Context) {
 		UserID:      req.UserID,
 	}
 
-	subscription, err := s.service.CreateSubscription(ctx.Request.Context(), sub)
+	subscription, err := s.service.CreateSubscription(sub)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
