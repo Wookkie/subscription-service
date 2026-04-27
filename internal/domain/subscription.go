@@ -15,4 +15,10 @@ type SubscriptionRequest struct {
 	ServiceName string `json:"service_name"`
 	Price       int    `json:"price"`
 	UserID      string `json:"user_id"`
+	StartDate   string `json:"start_date"`
+}
+
+type SubscriptionUpdateRequest struct {
+	Price   int    `json:"price"`
+	EndDate string `json:"end_date"`
 }

@@ -62,6 +62,7 @@ func (s *Server) configRoutes() {
 	subscriptions.POST("/", handler.CreateSubscription)
 	subscriptions.PUT("/:id", handler.UpdateSubscription)
 	subscriptions.DELETE("/:id", handler.DeleteSubscription)
+	subscriptions.GET("/total", handler.GetTotalCost)
 
 	s.httpServe.Handler = router
 

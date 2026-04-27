@@ -2,6 +2,7 @@ package handler
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/Wookkie/subscription-service/internal/domain"
 	"github.com/Wookkie/subscription-service/internal/service"
@@ -24,10 +25,17 @@ func (s *SubHandler) CreateSubscription(ctx *gin.Context) {
 		return
 	}
 
+	t, err := time.Parse("01-2006", req.StartDate)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid start_date"})
+		return
+	}
+
 	sub := domain.Subscription{
 		ServiceName: req.ServiceName,
 		Price:       req.Price,
 		UserID:      req.UserID,
+		StartDate:   t,
 	}
 
 	subscription, err := s.service.CreateSubscription(sub)
@@ -64,14 +72,25 @@ func (s *SubHandler) GetSubscriptionByID(ctx *gin.Context) {
 func (s *SubHandler) UpdateSubscription(ctx *gin.Context) {
 	id := ctx.Param("id")
 
-	var sub domain.Subscription
+	var sub domain.SubscriptionUpdateRequest
 
-	updated, err := s.service.UpdateSubscription(id, sub)
+	if err := ctx.ShouldBindJSON(&sub); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		return
+	}
+
+	req := domain.Subscription{
+		Price:   sub.Price,
+		EndDate: time.Time{},
+	}
+
+	updated, err := s.service.UpdateSubscription(id, req)
 	if err != nil {
 		ctx.JSON(http.StatusNotFound, gin.H{"error": "not found subscription"})
 		return
 	}
 	ctx.JSON(http.StatusOK, updated)
+
 }
 
 func (s *SubHandler) DeleteSubscription(ctx *gin.Context) {
@@ -83,4 +102,28 @@ func (s *SubHandler) DeleteSubscription(ctx *gin.Context) {
 		return
 	}
 	ctx.Status(http.StatusNoContent)
+}
+
+func (h *SubHandler) GetTotalCost(c *gin.Context) {
+	var req domain.SubscriptionTotalRequest
+
+	if err := c.ShouldBindQuery(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid query"})
+		return
+	}
+
+	if req.From == "" || req.To == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "from and to are required"})
+		return
+	}
+
+	total, err := h.service.CalculateTotalCost(req)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, domain.SubscriptionTotalResponse{
+		Total: total,
+	})
 }
