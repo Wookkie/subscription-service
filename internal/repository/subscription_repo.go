@@ -91,3 +91,39 @@ func (r *SubscriptionRepo) DeleteSubscription(id string) error {
 
 	return err
 }
+
+func (r *SubscriptionRepo) GetSubscriptionsForPeriod(from, to time.Time, userID, serviceName string) ([]domain.Subscription, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	query := `
+        SELECT id, service_name, price, user_id, start_date, end_date
+        FROM subscriptions
+        WHERE start_date >= $1 AND start_date <= $2
+    `
+
+	args := []any{from, to}
+
+	if userID != "" {
+		query += " AND user_id = $3"
+		args = append(args, userID)
+	}
+
+	rows, err := r.db.Query(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var sub []domain.Subscription
+
+	for rows.Next() {
+		var s domain.Subscription
+		if err := rows.Scan(&s.ID, &s.ServiceName, &s.Price, &s.UserID, &s.StartDate, &s.EndDate); err != nil {
+			return nil, err
+		}
+		sub = append(sub, s)
+	}
+
+	return sub, nil
+}
