@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/Wookkie/subscription-service/internal/domain"
@@ -103,10 +104,17 @@ func (r *SubscriptionRepo) GetSubscriptionsForPeriod(from, to time.Time, userID,
     `
 
 	args := []any{from, to}
+	idx := 3
 
 	if userID != "" {
-		query += " AND user_id = $3"
+		query += fmt.Sprintf(" AND user_id = $%d", idx)
 		args = append(args, userID)
+		idx++
+	}
+
+	if serviceName != "" {
+		query += fmt.Sprintf(" AND service_name = $%d", idx)
+		args = append(args, serviceName)
 	}
 
 	rows, err := r.db.Query(ctx, query, args...)
