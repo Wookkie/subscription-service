@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/rs/zerolog/log"
+
 	"github.com/Wookkie/subscription-service/internal/config"
 	"github.com/Wookkie/subscription-service/internal/database"
 	"github.com/Wookkie/subscription-service/internal/handler"
@@ -22,11 +24,11 @@ type Server struct {
 func New(cfg *config.Config) *Server {
 	db, err := database.New(context.Background(), cfg.DBConn)
 	if err != nil {
-		panic(err)
+		log.Fatal().Err(err).Msg("failed to connect database")
 	}
 
 	if err := database.ApplyMigrations(cfg.DBConn); err != nil {
-		panic(err)
+		log.Fatal().Err(err).Msg("failed to apply migrations")
 	}
 
 	httpServe := http.Server{
@@ -69,10 +71,12 @@ func (s *Server) configRoutes() {
 }
 
 func (s *Server) Run() error {
+	log.Info().Msg("server is running")
 	return s.httpServe.ListenAndServe()
 }
 
 func (s *Server) Stop(ctx context.Context) error {
+	log.Info().Msg("shutting down server")
 	if s.db != nil {
 		s.db.Close()
 	}

@@ -4,6 +4,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/rs/zerolog/log"
+
 	"github.com/Wookkie/subscription-service/internal/domain"
 	"github.com/Wookkie/subscription-service/internal/service"
 	"github.com/gin-gonic/gin"
@@ -21,12 +23,14 @@ func (s *SubHandler) CreateSubscription(ctx *gin.Context) {
 	var req domain.SubscriptionRequest
 
 	if err := ctx.ShouldBindJSON(&req); err != nil {
+		log.Error().Err(err).Msg("invalid create subscription request")
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
 		return
 	}
 
 	t, err := time.Parse("01-2006", req.StartDate)
 	if err != nil {
+		log.Error().Err(err).Msg("invalid start_date format")
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid start_date"})
 		return
 	}
@@ -40,6 +44,7 @@ func (s *SubHandler) CreateSubscription(ctx *gin.Context) {
 
 	subscription, err := s.service.CreateSubscription(sub)
 	if err != nil {
+		log.Error().Err(err).Msg("failed to create subscription")
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -51,6 +56,7 @@ func (s *SubHandler) CreateSubscription(ctx *gin.Context) {
 func (s *SubHandler) GetAllSubscriptions(ctx *gin.Context) {
 	subscription, err := s.service.GetAllSubscriptions()
 	if err != nil {
+		log.Error().Err(err).Msg("failed to get subscriptions")
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -63,6 +69,7 @@ func (s *SubHandler) GetSubscriptionByID(ctx *gin.Context) {
 
 	subscription, err := s.service.GetSubscriptionByID(id)
 	if err != nil {
+		log.Error().Err(err).Str("id", id).Msg("subscription not found")
 		ctx.JSON(http.StatusNotFound, gin.H{"error": "not found subscription"})
 		return
 	}
@@ -75,6 +82,7 @@ func (s *SubHandler) UpdateSubscription(ctx *gin.Context) {
 	var sub domain.SubscriptionUpdateRequest
 
 	if err := ctx.ShouldBindJSON(&sub); err != nil {
+		log.Error().Err(err).Msg("invalid update request")
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
 		return
 	}
@@ -86,6 +94,7 @@ func (s *SubHandler) UpdateSubscription(ctx *gin.Context) {
 
 	updated, err := s.service.UpdateSubscription(id, req)
 	if err != nil {
+		log.Error().Err(err).Str("id", id).Msg("update failed")
 		ctx.JSON(http.StatusNotFound, gin.H{"error": "not found subscription"})
 		return
 	}
@@ -98,6 +107,7 @@ func (s *SubHandler) DeleteSubscription(ctx *gin.Context) {
 
 	err := s.service.DeleteSubscription(id)
 	if err != nil {
+		log.Error().Err(err).Str("id", id).Msg("delete failed")
 		ctx.JSON(http.StatusNotFound, gin.H{"error": "not found subscription"})
 		return
 	}
@@ -108,6 +118,7 @@ func (h *SubHandler) GetTotalCost(c *gin.Context) {
 	var req domain.SubscriptionTotalRequest
 
 	if err := c.ShouldBindQuery(&req); err != nil {
+		log.Error().Err(err).Msg("invalid query params")
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid query"})
 		return
 	}
@@ -119,10 +130,12 @@ func (h *SubHandler) GetTotalCost(c *gin.Context) {
 
 	total, err := h.service.CalculateTotalCost(req)
 	if err != nil {
+		log.Error().Err(err).Msg("failed to calculate total")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
+	log.Info().Int("total", total).Msg("total calculated")
 	c.JSON(http.StatusOK, domain.SubscriptionTotalResponse{
 		Total: total,
 	})
