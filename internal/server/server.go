@@ -6,6 +6,8 @@ import (
 	"net/http"
 
 	"github.com/rs/zerolog/log"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 
 	"github.com/Wookkie/subscription-service/internal/config"
 	"github.com/Wookkie/subscription-service/internal/database"
@@ -25,10 +27,6 @@ func New(cfg *config.Config) *Server {
 	db, err := database.New(context.Background(), cfg.DBConn)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to connect database")
-	}
-
-	if err := database.ApplyMigrations(cfg.DBConn); err != nil {
-		log.Fatal().Err(err).Msg("failed to apply migrations")
 	}
 
 	httpServe := http.Server{
@@ -65,6 +63,8 @@ func (s *Server) configRoutes() {
 	subscriptions.PUT("/:id", handler.UpdateSubscription)
 	subscriptions.DELETE("/:id", handler.DeleteSubscription)
 	subscriptions.GET("/total", handler.GetTotalCost)
+
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	s.httpServe.Handler = router
 

@@ -1,21 +1,40 @@
 package config
 
-import "flag"
+import (
+	"os"
+	"strconv"
+)
 
 type Config struct {
-	Host string
-	Port int
+	Host   string
+	Port   int
 	DBConn string
 }
 
 func ReadConfig() *Config {
-	var cfg Config
+	port, _ := strconv.Atoi(getEnv("PORT", "8080"))
 
-	flag.StringVar(&cfg.Host, "host", "0.0.0.0", "server host address")
-	flag.IntVar(&cfg.Port, "port", 8080, "server port")
-	flag.StringVar(&cfg.DBConn, "db", "postgres://app_user:password@localhost:5433/subscriptions?sslmode=disable", "database connection")
+	return &Config{
+		Host:   getEnv("HOST", "0.0.0.0"),
+		Port:   port,
+		DBConn: buildDBConn(),
+	}
+}
 
-	flag.Parse()
+func getEnv(key, fallback string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return fallback
+}
 
-	return &cfg
+func buildDBConn() string {
+	host := getEnv("DB_HOST", "localhost")
+	port := getEnv("DB_PORT", "5432")
+	user := getEnv("DB_USER", "app_user")
+	pass := getEnv("DB_PASSWORD", "password")
+	db := getEnv("DB_NAME", "subscriptions")
+	ssl := getEnv("DB_SSLMODE", "disable")
+
+	return "postgres://" + user + ":" + pass + "@" + host + ":" + port + "/" + db + "?sslmode=" + ssl
 }
